@@ -140,16 +140,25 @@ function renderListen(step, main, footer) {
   main.innerHTML = `
     <div class="text-xs text-duo-gray uppercase font-black mb-2">Escuchá y elegí</div>
     <h2 class="text-xl font-black mb-4">${UI.esc(step.prompt)}</h2>
-    <button id="speak-btn" class="btn btn-blue mb-6 mx-auto">
-      ${UI.icons.speaker} <span>Tocá para escuchar</span>
-    </button>
+    <div class="flex flex-col items-center gap-2 mb-6">
+      <button id="speak-btn" class="btn btn-blue">
+        ${UI.icons.speaker} <span>Tocá para escuchar</span>
+      </button>
+      <div id="voice-info" class="text-[10px] text-duo-gray uppercase font-black tracking-wider">🇺🇸 cargando voz…</div>
+    </div>
     <div class="grid grid-cols-1 gap-3" id="opts">
       ${step.options.map((o, i) => `<button class="opt" data-i="${i}">${UI.esc(o)}</button>`).join('')}
     </div>
   `;
   const speakBtn = main.querySelector('#speak-btn');
+  const voiceInfo = main.querySelector('#voice-info');
   speakBtn.addEventListener('click', () => UI.speak(step.speak));
   setTimeout(() => UI.speak(step.speak), 300);
+  UI.currentVoiceName().then(name => {
+    const isUS = /en[-_ ]?US|American|Google US|Aria|Jenny|Guy|Davis|Samantha|Alex/i.test(name);
+    voiceInfo.innerHTML = `${isUS ? '🇺🇸' : '⚠️'} Voz: ${UI.esc(name)}`;
+    voiceInfo.className = 'text-[10px] uppercase font-black tracking-wider ' + (isUS ? 'text-duo-gray' : 'text-duo-red');
+  });
 
   let selected = null;
   main.querySelectorAll('.opt').forEach(b => {

@@ -127,7 +127,7 @@ window.UI = (() => {
   }
 
   function confetti() {
-    const colors = ['#58CC02','#1CB0F6','#FFC800','#FF4B4B','#CE82FF','#7DDA3F'];
+    const colors = ['#3C3B6E','#B22234','#FFC800','#FFFFFF','#5E5D91','#D93A4F'];
     for (let i = 0; i < 60; i++) {
       const p = document.createElement('div');
       p.className = 'confetti-piece';
@@ -141,15 +141,88 @@ window.UI = (() => {
     }
   }
 
-  function speak(text) {
+  /* --------- TTS forzado a inglés AMERICANO ---------
+     El navegador por defecto suele elegir en-GB. Acá filtramos voces
+     por lang="en-US" y priorizamos las voces americanas conocidas de
+     Google (Android/Chrome), Microsoft (Edge/Windows) y Apple (iOS/Mac).
+     -------------------------------------------------- */
+  let _voicesReady = null;
+  function loadVoices() {
+    if (_voicesReady) return _voicesReady;
+    _voicesReady = new Promise((resolve) => {
+      const now = window.speechSynthesis.getVoices();
+      if (now && now.length) return resolve(now);
+      const handler = () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', handler);
+        resolve(window.speechSynthesis.getVoices());
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', handler);
+      // fallback si el evento nunca dispara
+      setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1500);
+    });
+    return _voicesReady;
+  }
+
+  const AMERICAN_VOICE_PATTERNS = [
+    /Google US English/i,
+    /Microsoft Aria/i,
+    /Microsoft Jenny/i,
+    /Microsoft Guy/i,
+    /Microsoft Davis/i,
+    /Microsoft Zira/i,
+    /Microsoft David/i,
+    /Samantha/i,
+    /Alex/i,
+    /Fred/i,
+    /Victoria/i,
+    /^en[-_]US/i,
+  ];
+
+  let _chosenVoice = null;
+
+  async function pickAmericanVoice() {
+    if (_chosenVoice) return _chosenVoice;
+    const voices = await loadVoices();
+    if (!voices || !voices.length) return null;
+    const isUS = (v) => (v.lang || '').toLowerCase().replace('_','-').startsWith('en-us');
+    // 1) voces preferidas + en-US
+    for (const rx of AMERICAN_VOICE_PATTERNS) {
+      const v = voices.find(v => (rx.test(v.name) || rx.test(v.lang)) && isUS(v));
+      if (v) { _chosenVoice = v; return v; }
+    }
+    // 2) primera voz que declare en-US
+    const usAny = voices.find(isUS);
+    if (usAny) { _chosenVoice = usAny; return usAny; }
+    // 3) última red: cualquier "en", pero explícitamente evitando en-GB si hay alternativas
+    const nonGb = voices.filter(v => /^en/i.test(v.lang) && !/en[-_]GB/i.test(v.lang));
+    if (nonGb.length) { _chosenVoice = nonGb[0]; return nonGb[0]; }
+    return voices.find(v => /^en/i.test(v.lang)) || null;
+  }
+
+  async function speak(text) {
     if (!('speechSynthesis' in window)) return;
     try {
+      const voice = await pickAmericanVoice();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'en-US';
+      if (voice) u.voice = voice;
       u.rate = 0.9;
+      u.pitch = 1.0;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
-    } catch {}
+    } catch (e) { console.warn('speak error', e); }
+  }
+
+  // Diagnóstico para el usuario: qué voz está usando el navegador.
+  async function currentVoiceName() {
+    const v = await pickAmericanVoice();
+    return v ? `${v.name} (${v.lang})` : 'sin voz disponible';
+  }
+
+  // Warmup: cargar voces apenas se puedan (algunos navegadores requieren
+  // interacción del usuario antes; igual guardamos para evitar delay).
+  if ('speechSynthesis' in window) {
+    loadVoices();
   }
 
   function fmtDate(iso) {
@@ -168,5 +241,5 @@ window.UI = (() => {
     return `<span class="level-pill level-${code}">${code}</span>`;
   }
 
-  return { esc, toast, modal, confirmAction, icons, bnav, bnavTeacher, confetti, speak, fmtDate, fmtTime, fmtMoney, levelPill };
+  return { esc, toast, modal, confirmAction, icons, bnav, bnavTeacher, confetti, speak, currentVoiceName, fmtDate, fmtTime, fmtMoney, levelPill };
 })();
