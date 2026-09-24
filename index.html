@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#3C3B6E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Silver Academy — Aprende idiomas</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/logo.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/logo.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            /* mantenemos los alias duo-* pero mapeados a la paleta USA */
+            duo: {
+              green:     '#3C3B6E', /* Old Glory Blue (primario) */
+              greenDark: '#25254A',
+              blue:      '#B22234', /* Old Glory Red (acento fuerte) */
+              blueDark:  '#8A1928',
+              yellow:    '#FFC800', /* gold accent (estrellas) */
+              red:       '#B22234', /* wrong / heart */
+              purple:    '#7A1934', /* burdeos para premium */
+              gray:      '#7A7A85',
+              grayLight: '#E7E7EE',
+              ink:       '#1A1A2E',
+            },
+            usa: {
+              red:       '#B22234',
+              redDark:   '#8A1928',
+              redLight:  '#D93A4F',
+              blue:      '#3C3B6E',
+              blueDark:  '#25254A',
+              blueLight: '#5E5D91',
+              cream:     '#FBF9F2',
+              gold:      '#FFC800',
+              goldDark:  '#C89600',
+            }
+          },
+          fontFamily: {
+            sans: ['"DIN Round Pro"', 'Nunito', 'system-ui', 'sans-serif']
+          },
+          boxShadow: {
+            'btn':        '0 4px 0 0 rgba(0,0,0,0.15)',
+            'btn-green':  '0 4px 0 0 #25254A',
+            'btn-blue':   '0 4px 0 0 #8A1928',
+            'btn-red':    '0 4px 0 0 #8A1928',
+            'btn-yellow': '0 4px 0 0 #C89600',
+            'card':       '0 2px 0 0 rgba(60,59,110,0.10)',
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=usa4" />
+</head>
+<body class="bg-white text-duo-ink antialiased">
+  <div id="app" class="min-h-screen"></div>
+
+  <div id="toast-root" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+  <div id="modal-root"></div>
+
+  <script src="js/data.js?v=usa4"></script>
+  <script src="js/store.js?v=usa4"></script>
+  <script src="js/ui.js?v=usa4"></script>
+  <script src="js/router.js?v=usa4"></script>
+  <script src="js/views/auth.js?v=usa4"></script>
+  <script src="js/views/home.js?v=usa4"></script>
+  <script src="js/views/lesson.js?v=usa4"></script>
+  <script src="js/views/profile.js?v=usa4"></script>
+  <script src="js/views/leaderboard.js?v=usa4"></script>
+  <script src="js/views/schedule.js?v=usa4"></script>
+  <script src="js/views/subscription.js?v=usa4"></script>
+  <script src="js/views/teacher.js?v=usa4"></script>
+  <script src="js/app.js?v=usa4"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
