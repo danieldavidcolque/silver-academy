@@ -1,4 +1,4 @@
-const CACHE = 'silver-academy-v5-us-voice';
+const CACHE = 'silver-academy-v6-record';
 const CORE = [
   './',
   './index.html',

@@ -179,11 +179,39 @@ window.UI = (() => {
   ];
 
   let _chosenVoice = null;
+  const VOICE_PREF_KEY = 'silver-academy-voice-name';
+
+  function savedVoiceName() {
+    try { return localStorage.getItem(VOICE_PREF_KEY) || null; } catch { return null; }
+  }
+  function setSavedVoiceName(name) {
+    try {
+      if (name) localStorage.setItem(VOICE_PREF_KEY, name);
+      else localStorage.removeItem(VOICE_PREF_KEY);
+    } catch {}
+    _chosenVoice = null; // fuerza re-pick
+  }
+
+  async function listEnglishVoices() {
+    const voices = await loadVoices();
+    return voices.filter(v => /^en/i.test(v.lang || '')).map(v => ({
+      name: v.name,
+      lang: v.lang,
+      isUS: (v.lang || '').toLowerCase().replace('_','-').startsWith('en-us'),
+      raw: v,
+    }));
+  }
 
   async function pickAmericanVoice() {
     if (_chosenVoice) return _chosenVoice;
     const voices = await loadVoices();
     if (!voices || !voices.length) return null;
+    // 0) preferencia manual guardada
+    const pref = savedVoiceName();
+    if (pref) {
+      const v = voices.find(x => x.name === pref);
+      if (v) { _chosenVoice = v; return v; }
+    }
     const isUS = (v) => (v.lang || '').toLowerCase().replace('_','-').startsWith('en-us');
     // 1) voces preferidas + en-US
     for (const rx of AMERICAN_VOICE_PATTERNS) {
@@ -193,7 +221,7 @@ window.UI = (() => {
     // 2) primera voz que declare en-US
     const usAny = voices.find(isUS);
     if (usAny) { _chosenVoice = usAny; return usAny; }
-    // 3) última red: cualquier "en", pero explícitamente evitando en-GB si hay alternativas
+    // 3) cualquier "en" evitando en-GB
     const nonGb = voices.filter(v => /^en/i.test(v.lang) && !/en[-_]GB/i.test(v.lang));
     if (nonGb.length) { _chosenVoice = nonGb[0]; return nonGb[0]; }
     return voices.find(v => /^en/i.test(v.lang)) || null;
@@ -241,5 +269,5 @@ window.UI = (() => {
     return `<span class="level-pill level-${code}">${code}</span>`;
   }
 
-  return { esc, toast, modal, confirmAction, icons, bnav, bnavTeacher, confetti, speak, currentVoiceName, fmtDate, fmtTime, fmtMoney, levelPill };
+  return { esc, toast, modal, confirmAction, icons, bnav, bnavTeacher, confetti, speak, currentVoiceName, listEnglishVoices, savedVoiceName, setSavedVoiceName, fmtDate, fmtTime, fmtMoney, levelPill };
 })();

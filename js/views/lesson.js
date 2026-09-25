@@ -152,13 +152,29 @@ function renderListen(step, main, footer) {
   `;
   const speakBtn = main.querySelector('#speak-btn');
   const voiceInfo = main.querySelector('#voice-info');
-  speakBtn.addEventListener('click', () => UI.speak(step.speak));
-  setTimeout(() => UI.speak(step.speak), 300);
-  UI.currentVoiceName().then(name => {
-    const isUS = /en[-_ ]?US|American|Google US|Aria|Jenny|Guy|Davis|Samantha|Alex/i.test(name);
-    voiceInfo.innerHTML = `${isUS ? '🇺🇸' : '⚠️'} Voz: ${UI.esc(name)}`;
-    voiceInfo.className = 'text-[10px] uppercase font-black tracking-wider ' + (isUS ? 'text-duo-gray' : 'text-duo-red');
-  });
+
+  const playStep = () => {
+    if (step.audioData) {
+      // grabación del profe
+      const audio = new Audio(step.audioData);
+      audio.play().catch(() => {});
+    } else {
+      UI.speak(step.speak);
+    }
+  };
+  speakBtn.addEventListener('click', playStep);
+  setTimeout(playStep, 300);
+
+  if (step.audioData) {
+    voiceInfo.innerHTML = '🎤 Voz de la profe (grabación)';
+    voiceInfo.className = 'text-[10px] uppercase font-black tracking-wider text-duo-blue';
+  } else {
+    UI.currentVoiceName().then(name => {
+      const isUS = /en[-_ ]?US|American|Google US|Aria|Jenny|Guy|Davis|Samantha|Alex/i.test(name);
+      voiceInfo.innerHTML = `${isUS ? '🇺🇸' : '⚠️'} Voz: ${UI.esc(name)}`;
+      voiceInfo.className = 'text-[10px] uppercase font-black tracking-wider ' + (isUS ? 'text-duo-gray' : 'text-duo-red');
+    });
+  }
 
   let selected = null;
   main.querySelectorAll('.opt').forEach(b => {

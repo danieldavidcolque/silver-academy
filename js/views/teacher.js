@@ -181,6 +181,24 @@ function renderStep(s, i) {
         ${s.type === 'listen' ? `
           <label class="label">Texto a escuchar (inglés)</label>
           <input class="field mb-2" data-field="speak" value="${UI.esc(s.speak || '')}" placeholder="Ej: Hello, how are you?"/>
+          <div class="p-3 rounded-xl mb-2" style="background: rgba(60,59,110,0.08); border: 2px solid var(--usa-blue-light)">
+            <div class="text-xs font-black uppercase mb-2" style="color: var(--usa-blue)">
+              🎧 Audio del ejercicio ${s.audioData ? '(usando grabación del profe)' : '(usando voz americana del sistema)'}
+            </div>
+            <div class="flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-ghost btn-sm" data-preview-tts>▶ Preview voz USA</button>
+              ${s.audioData ? `
+                <button type="button" class="btn btn-ghost btn-sm" data-play-custom>🎤 Escuchar mi grabación</button>
+                <button type="button" class="btn btn-ghost btn-sm" style="color: var(--usa-red)" data-delete-audio>🗑 Borrar grabación</button>
+              ` : ''}
+              <button type="button" class="btn btn-red btn-sm" data-record>🔴 ${s.audioData ? 'Regrabar' : 'Grabar mi voz'}</button>
+            </div>
+            <div class="text-xs mt-2 text-duo-gray">
+              ${s.audioData
+                ? 'Al reproducir en la clase, se usará tu grabación.'
+                : 'Sin grabación. En clase suena la voz americana del navegador.'}
+            </div>
+          </div>
         ` : ''}
         <label class="label">Opciones (marcá la correcta)</label>
         <div class="space-y-2">
@@ -326,6 +344,91 @@ function wireStepEvents() {
       s.options.push('');
       rerenderSteps();
     });
+
+    // ---- Audio handlers para ejercicios de listening ----
+    card.querySelector('[data-preview-tts]')?.addEventListener('click', () => {
+      if (!s.speak?.trim()) return UI.toast('Escribí primero el texto a escuchar', 'error');
+      UI.speak(s.speak);
+    });
+    card.querySelector('[data-play-custom]')?.addEventListener('click', () => {
+      if (!s.audioData) return;
+      const audio = new Audio(s.audioData);
+      audio.play().catch(() => UI.toast('No se pudo reproducir', 'error'));
+    });
+    card.querySelector('[data-delete-audio]')?.addEventListener('click', async () => {
+      const ok = await UI.confirmAction('¿Borrar la grabación custom y volver a la voz del sistema?', 'Borrar', true);
+      if (!ok) return;
+      s.audioData = null;
+      rerenderSteps();
+    });
+    card.querySelector('[data-record]')?.addEventListener('click', (e) => {
+      startRecordingFlow(s, e.currentTarget);
+    });
+  });
+}
+
+/* ---------- Grabación de audio ---------- */
+let _recorder = null;
+let _recordingBtn = null;
+
+async function startRecordingFlow(step, btn) {
+  if (_recorder) {
+    // ya grabando → detener
+    stopRecordingFlow();
+    return;
+  }
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    return UI.toast('Tu navegador no soporta grabación de audio', 'error');
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimes = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
+    const mime = mimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    const chunks = [];
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+      // limite ~2MB por grabación para evitar reventar localStorage
+      if (blob.size > 2 * 1024 * 1024) {
+        UI.toast('Grabación muy larga (máx ~2 MB). Intentá una más corta.', 'error');
+        _recorder = null;
+        return;
+      }
+      const b64 = await blobToBase64(blob);
+      step.audioData = b64;
+      _recorder = null;
+      _recordingBtn = null;
+      UI.toast('Grabación guardada ✓', 'success');
+      rerenderSteps();
+    };
+    rec.start();
+    _recorder = rec;
+    _recordingBtn = btn;
+    btn.textContent = '⏹ Detener grabación';
+    btn.classList.add('animate-pulse');
+  } catch (err) {
+    console.error(err);
+    UI.toast('No se pudo acceder al micrófono. ¿Diste permiso?', 'error');
+  }
+}
+
+function stopRecordingFlow() {
+  if (_recorder && _recorder.state !== 'inactive') {
+    _recorder.stop();
+  }
+  if (_recordingBtn) {
+    _recordingBtn.classList.remove('animate-pulse');
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
 
